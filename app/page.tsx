@@ -58,7 +58,7 @@ export default async function Home() {
 
                 {/* زر الطلب عبر واتساب */}
                 <a
-                  href={`https://wa.me/966500000000?text=${encodeURIComponent(`مرحباً، أريد طلب هذا الجهاز: ${product.name} بسعر ${product.price} ر.س`)}`}
+                  href={`https://wa.me/966574105090?text=${encodeURIComponent(`مرحباً، أريد طلب هذا الجهاز: ${product.name} بسعر ${product.price} ر.س`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="mt-4 block w-full bg-green-600 text-center text-white py-3 rounded-xl font-bold hover:bg-green-700 transition shadow-lg"
