@@ -1,15 +1,21 @@
 import { supabase } from '@/lib/supabase';
 import React from 'react';
 
-export const revalidate = 0; // لضمان تحديث البيانات بشكل فوري
+export const revalidate = 0;
 
 export default async function Home() {
   const { data: products, error } = await supabase.from('products').select('*');
 
   return (
     <main className="min-h-screen bg-slate-950 text-white p-6">
-      {/* رأس الصفحة */}
-      <header className="max-w-4xl mx-auto mb-10 text-center bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-lg">
+      {/* رأس الصفحة مع زر لوحة التحكم */}
+      <header className="max-w-4xl mx-auto mb-10 text-center bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-lg relative">
+        <a 
+          href="/admin" 
+          className="absolute top-4 left-4 bg-slate-800 hover:bg-slate-700 text-amber-400 px-3 py-1.5 rounded-xl text-sm font-semibold transition border border-slate-700 flex items-center gap-1"
+        >
+          ⚙️ لوحة التحكم
+        </a>
         <h1 className="text-3xl font-bold text-amber-400 mb-2">متجر سهيل 📱</h1>
         <p className="text-slate-400">أفضل الأجهزة والمنتجات الأصلية بأفضل الأسعار</p>
       </header>
