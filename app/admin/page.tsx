@@ -28,6 +28,7 @@ export default function AdminPage() {
   const [price, setPrice] = useState('')
   const [battery, setBattery] = useState('')
   const [storage, setStorage] = useState('')
+  const [category, setCategory] = useState('iphone') // القسم الافتراضي
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [products, setProducts] = useState<any[]>([])
@@ -49,6 +50,7 @@ export default function AdminPage() {
     setPrice(product.price || '')
     setBattery(product.battery || '')
     setStorage(product.storage || '')
+    setCategory(product.category || 'iphone')
     setExistingImage(product.image || '')
     setImageFile(null)
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -60,6 +62,7 @@ export default function AdminPage() {
     setPrice('')
     setBattery('')
     setStorage('')
+    setCategory('iphone')
     setExistingImage('')
     setImageFile(null)
   }
@@ -94,14 +97,14 @@ export default function AdminPage() {
       if (editingId) {
         const { error: updateError } = await supabase
           .from('products')
-          .update({ name, price, battery, storage, image: imageUrl })
+          .update({ name, price, battery, storage, category, image: imageUrl })
           .eq('id', editingId)
 
         if (updateError) throw updateError
         alert('تم تحديث بيانات الجهاز بنجاح! ✏️')
       } else {
         const { error: insertError } = await supabase.from('products').insert([
-          { name, price, battery, storage, image: imageUrl }
+          { name, price, battery, storage, category, image: imageUrl }
         ])
 
         if (insertError) throw insertError
@@ -189,10 +192,24 @@ export default function AdminPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-sm font-bold text-slate-300 mb-2">اسم الجهاز</label>
-              <input type="text" placeholder="مثال: iPad A16" value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3.5 text-white placeholder-slate-600 focus:outline-none focus:border-amber-500" required />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label className="block text-sm font-bold text-slate-300 mb-2">اسم الجهاز</label>
+                <input type="text" placeholder="مثال: iPhone 15 Pro" value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3.5 text-white placeholder-slate-600 focus:outline-none focus:border-amber-500" required />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-300 mb-2">اختر القسم</label>
+                <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3.5 text-white focus:outline-none focus:border-amber-500">
+                  <option value="iphone">📱 أيفون جديد</option>
+                  <option value="iphone_used">📱 أيفون مستعمل</option>
+                  <option value="ipad">💻 آي باد</option>
+                  <option value="watches">⌚ ساعات</option>
+                  <option value="android_tab">📑 تابلت أندرويد</option>
+                  <option value="android_phone">📱 موبايل أندرويد</option>
+                </select>
+              </div>
             </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <div>
                 <label className="block text-sm font-bold text-slate-300 mb-2">السعر</label>
@@ -207,10 +224,12 @@ export default function AdminPage() {
                 <input type="text" placeholder="مثال: 100%" value={battery} onChange={(e) => setBattery(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3.5 text-white placeholder-slate-600 focus:outline-none focus:border-amber-500" />
               </div>
             </div>
+
             <div>
               <label className="block text-sm font-bold text-slate-300 mb-2">{editingId ? 'تغيير صورة الجهاز (اختياري)' : 'صورة الجهاز'}</label>
               <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files ? e.target.files[0] : null)} className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-slate-400 file:ml-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-amber-500 file:text-slate-950 hover:file:bg-amber-400 transition cursor-pointer" />
             </div>
+
             <button type="submit" disabled={loading} className={`w-full font-black py-4 rounded-2xl shadow-lg transition active:scale-[0.99] disabled:opacity-50 text-base ${editingId ? 'bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-400 text-slate-950' : 'bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950'}`}>
               {loading ? 'جاري المعالجة... ⏳' : editingId ? '💾 حفظ التعديلات' : '🚀 إضافة الجهاز للمتجر'}
             </button>
@@ -229,7 +248,7 @@ export default function AdminPage() {
                     <div className="w-14 h-14 bg-slate-900 rounded-xl flex items-center justify-center text-xl">📱</div>
                   )}
                   <div>
-                    <h3 className="font-bold text-white text-base">{item.name}</h3>
+                    <h3 className="font-bold text-white text-base">{item.name} <span className="text-xs bg-slate-800 px-2 py-0.5 rounded text-amber-400 mr-2">{item.category}</span></h3>
                     <p className="text-amber-400 font-semibold text-sm">
                       {item.price} {item.storage ? ` | 💾 ${item.storage}` : ''} {item.battery ? ` | 🔋 ${item.battery}` : ''}
                     </p>
