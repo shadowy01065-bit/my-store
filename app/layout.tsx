@@ -15,6 +15,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "سهيل للاتصالات - أفضل الأجهزة والأصلية",
   description: "أفضل الأجهزة، الجوالات، والأكسسوارات الأصلية بأفضل الأسعار في متجر سهيل للاتصالات",
+  verification: {
+    google: "dXNSo5WOwpCSyA-v28EESOfVNxjNK6KZzWJ8dCGFDRs",
+  },
 };
 
 export default function RootLayout({
