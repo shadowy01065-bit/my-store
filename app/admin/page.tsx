@@ -1,81 +1,253 @@
-import { supabase } from '@/lib/supabase';
-import React from 'react';
+'use client'
 
-export const revalidate = 0; // لضمان تحديث البيانات بشكل فوري
+import { useState, useEffect } from 'react'
+import { supabase } from '@/lib/supabase'
 
-export default async function Home() {
-  const { data: products, error } = await supabase.from('products').select('*');
+export default function AdminPage() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [passwordInput, setPasswordInput] = useState('')
+  const ADMIN_PASSWORD = 'Moka2011'
+
+  useEffect(() => {
+    const auth = sessionStorage.getItem('isAdminAuth')
+    if (auth === 'true') setIsAuthenticated(true)
+  }, [])
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (passwordInput === ADMIN_PASSWORD) {
+      setIsAuthenticated(true)
+      sessionStorage.setItem('isAdminAuth', 'true')
+    } else {
+      alert('كلمة المرور غير صحيحة! ❌')
+      setPasswordInput('')
+    }
+  }
+
+  const [name, setName] = useState('')
+  const [price, setPrice] = useState('')
+  const [battery, setBattery] = useState('')
+  const [storage, setStorage] = useState('')
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [products, setProducts] = useState<any[]>([])
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [existingImage, setExistingImage] = useState('')
+
+  const fetchProducts = async () => {
+    const { data } = await supabase.from('products').select('*').order('id', { ascending: false })
+    if (data) setProducts(data)
+  }
+
+  useEffect(() => {
+    if (isAuthenticated) fetchProducts()
+  }, [isAuthenticated])
+
+  const handleStartEdit = (product: any) => {
+    setEditingId(product.id)
+    setName(product.name || '')
+    setPrice(product.price || '')
+    setBattery(product.battery || '')
+    setStorage(product.storage || '')
+    setExistingImage(product.image || '')
+    setImageFile(null)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleCancelEdit = () => {
+    setEditingId(null)
+    setName('')
+    setPrice('')
+    setBattery('')
+    setStorage('')
+    setExistingImage('')
+    setImageFile(null)
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!name || !price) {
+      alert('يرجى إدخال اسم الجهاز والسعر على الأقل!')
+      return
+    }
+
+    setLoading(true)
+    try {
+      let imageUrl = existingImage
+
+      if (imageFile) {
+        const fileExt = imageFile.name.split('.').pop()
+        const fileName = `${Date.now()}.${fileExt}`
+        const { error: uploadError } = await supabase.storage
+          .from('images')
+          .upload(fileName, imageFile)
+
+        if (uploadError) throw uploadError
+
+        const { data: publicUrlData } = supabase.storage
+          .from('images')
+          .getPublicUrl(fileName)
+
+        imageUrl = publicUrlData.publicUrl
+      }
+
+      if (editingId) {
+        const { error: updateError } = await supabase
+          .from('products')
+          .update({ name, price, battery, storage, image: imageUrl })
+          .eq('id', editingId)
+
+        if (updateError) throw updateError
+        alert('تم تحديث بيانات الجهاز بنجاح! ✏️')
+      } else {
+        const { error: insertError } = await supabase.from('products').insert([
+          { name, price, battery, storage, image: imageUrl }
+        ])
+
+        if (insertError) throw insertError
+        alert('تم إضافة الجهاز للمتجر بنجاح! 🎉')
+      }
+
+      handleCancelEdit()
+      fetchProducts()
+    } catch (error: any) {
+      alert('حدث خطأ: ' + (error.message || error))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDelete = async (id: number) => {
+    if (confirm('هل أنت متأكد من حذف هذا الجهاز؟')) {
+      const { error } = await supabase.from('products').delete().eq('id', id)
+      if (!error) fetchProducts()
+      else alert('حدث خطأ أثناء الحذف')
+    }
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex items-center justify-center p-6" dir="rtl">
+        <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl shadow-2xl max-w-md w-full space-y-6 text-center">
+          <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-2xl flex items-center justify-center mx-auto text-2xl font-black">⚙️</div>
+          <div>
+            <span className="text-amber-400 font-bold text-xs uppercase tracking-widest bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">Admin Panel</span>
+            <h1 className="text-2xl font-black text-white mt-3">لوحة تحكم متجر سهيل</h1>
+            <p className="text-slate-400 text-sm mt-1">المنطقة محمية، يرجى إدخال كلمة المرور للمتابعة</p>
+          </div>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <input
+              type="password"
+              placeholder="أدخل كلمة المرور..."
+              value={passwordInput}
+              onChange={(e) => setPasswordInput(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3.5 text-white placeholder-slate-600 text-center tracking-widest focus:outline-none focus:border-amber-500"
+              required
+            />
+            <button type="submit" className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black py-3.5 rounded-2xl shadow-lg transition active:scale-[0.99]">
+              دخول Admin 🚀
+            </button>
+          </form>
+          <div className="pt-2">
+            <a href="/" className="text-slate-500 hover:text-slate-400 text-xs font-semibold transition">← العودة إلى المتجر الرئيسي</a>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white p-6">
-      {/* رأس الصفحة مع زر لوحة التحكم */}
-      <header className="max-w-4xl mx-auto mb-10 text-center bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-lg relative">
-        <a 
-          href="/admin" 
-          className="absolute top-4 left-4 bg-slate-800 hover:bg-slate-700 text-amber-400 px-3 py-1.5 rounded-xl text-sm font-semibold transition border border-slate-700 flex items-center gap-1"
-        >
-          ⚙️ لوحة التحكم
-        </a>
-        <h1 className="text-3xl font-bold text-amber-400 mb-2">متجر سهيل 📱</h1>
-        <p className="text-slate-400">أفضل الأجهزة والمنتجات الأصلية بأفضل الأسعار</p>
-      </header>
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans p-6 md:p-12" dir="rtl">
+      <div className="max-w-4xl mx-auto space-y-8">
+        <div className="flex items-center justify-between bg-slate-900 p-6 rounded-3xl border border-slate-800 shadow-xl">
+          <div>
+            <span className="text-amber-400 font-bold text-xs uppercase tracking-wider bg-amber-500/10 px-2.5 py-0.5 rounded-md border border-amber-500/20">Admin</span>
+            <h1 className="text-2xl md:text-3xl font-black text-white mt-1">لوحة تحكم متجر سهيل ⚙️</h1>
+            <p className="text-slate-400 text-sm mt-1">إضافة، تعديل وإدارة أجهزة المتجر بكل سهولة</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button onClick={() => { sessionStorage.removeItem('isAdminAuth'); setIsAuthenticated(false); }} className="bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold px-4 py-3 rounded-2xl border border-red-500/25 transition text-sm flex items-center gap-2">
+              <span>🚪</span><span>خروج</span>
+            </button>
+            <a href="/" className="bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold px-5 py-3 rounded-2xl border border-slate-700 transition text-sm flex items-center gap-2">
+              <span>🏠</span><span>عرض المتجر</span>
+            </a>
+          </div>
+        </div>
 
-      {/* قائمة المنتجات */}
-      <div className="max-w-4xl mx-auto">
-        <h2 className="text-xl font-semibold mb-6 text-slate-200">الأجهزة المتوفرة</h2>
-        
-        {error && (
-          <p className="text-red-500 text-center bg-red-950/50 p-4 rounded-lg">
-            حدث خطأ أثناء تحميل المنتجات: {error.message}
-          </p>
-        )}
+        <div className={`bg-slate-900/80 backdrop-blur-md p-6 md:p-8 rounded-3xl border shadow-xl transition ${editingId ? 'border-amber-500/50 ring-2 ring-amber-500/20' : 'border-slate-800'}`}>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <span>{editingId ? '✏️' : '➕'}</span>
+              <span>{editingId ? `تعديل بيانات الجهاز (ID: ${editingId})` : 'إضافة جهاز جديد'}</span>
+            </h2>
+            {editingId && (
+              <button type="button" onClick={handleCancelEdit} className="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold px-3 py-1.5 rounded-xl border border-slate-700 transition">
+                إلغاء التعديل ✕
+              </button>
+            )}
+          </div>
 
-        {!products || products.length === 0 ? (
-          <p className="text-slate-400 text-center py-10">لا توجد منتجات مضافة حالياً.</p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {products.map((product) => (
-              <div key={product.id} className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl flex flex-col justify-between p-5">
-                <div>
-                  {product.image && (
-                    <div className="relative h-48 w-full mb-4 bg-slate-950 rounded-xl overflow-hidden flex items-center justify-center">
-                      <img 
-                        src={product.image} 
-                        alt={product.name} 
-                        className="object-cover h-full w-full"
-                      />
-                    </div>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="block text-sm font-bold text-slate-300 mb-2">اسم الجهاز</label>
+              <input type="text" placeholder="مثال: iPad A16" value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3.5 text-white placeholder-slate-600 focus:outline-none focus:border-amber-500" required />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div>
+                <label className="block text-sm font-bold text-slate-300 mb-2">السعر</label>
+                <input type="text" placeholder="مثال: 3800 ر.س" value={price} onChange={(e) => setPrice(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3.5 text-white placeholder-slate-600 focus:outline-none focus:border-amber-500" required />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-300 mb-2">الذاكرة</label>
+                <input type="text" placeholder="مثال: 128GB" value={storage} onChange={(e) => setStorage(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3.5 text-white placeholder-slate-600 focus:outline-none focus:border-amber-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-300 mb-2">نسبة البطارية</label>
+                <input type="text" placeholder="مثال: 100%" value={battery} onChange={(e) => setBattery(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3.5 text-white placeholder-slate-600 focus:outline-none focus:border-amber-500" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-slate-300 mb-2">{editingId ? 'تغيير صورة الجهاز (اختياري)' : 'صورة الجهاز'}</label>
+              <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files ? e.target.files[0] : null)} className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-slate-400 file:ml-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-amber-500 file:text-slate-950 hover:file:bg-amber-400 transition cursor-pointer" />
+            </div>
+            <button type="submit" disabled={loading} className={`w-full font-black py-4 rounded-2xl shadow-lg transition active:scale-[0.99] disabled:opacity-50 text-base ${editingId ? 'bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-400 text-slate-950' : 'bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950'}`}>
+              {loading ? 'جاري المعالجة... ⏳' : editingId ? '💾 حفظ التعديلات' : '🚀 إضافة الجهاز للمتجر'}
+            </button>
+          </form>
+        </div>
+
+        <div className="bg-slate-900/80 backdrop-blur-md p-6 md:p-8 rounded-3xl border border-slate-800 shadow-xl">
+          <h2 className="text-xl font-bold text-white mb-6">الأجهزة المسجلة في قاعدة البيانات ({products.length})</h2>
+          <div className="space-y-4">
+            {products.map((item) => (
+              <div key={item.id} className="flex items-center justify-between bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                <div className="flex items-center gap-4">
+                  {item.image ? (
+                    <img src={item.image} alt={item.name} className="w-14 h-14 object-contain bg-slate-900 rounded-xl p-1" />
+                  ) : (
+                    <div className="w-14 h-14 bg-slate-900 rounded-xl flex items-center justify-center text-xl">📱</div>
                   )}
-                  <h3 className="text-xl font-bold text-white mb-2">{product.name}</h3>
-                  <div className="text-2xl font-black text-amber-400 mb-4">
-                    {product.price}
-                  </div>
-                  
-                  {/* المواصفات إن وجدت */}
-                  <div className="flex gap-2 mb-4 text-sm text-slate-300">
-                    {product.storage && (
-                      <span className="bg-slate-800 px-3 py-1 rounded-lg">الذاكرة: {product.storage}</span>
-                    )}
-                    {product.battery && (
-                      <span className="bg-slate-800 px-3 py-1 rounded-lg">البطارية: {product.battery}</span>
-                    )}
+                  <div>
+                    <h3 className="font-bold text-white text-base">{item.name}</h3>
+                    <p className="text-amber-400 font-semibold text-sm">
+                      {item.price} {item.storage ? ` | 💾 ${item.storage}` : ''} {item.battery ? ` | 🔋 ${item.battery}` : ''}
+                    </p>
                   </div>
                 </div>
-
-                {/* زر الطلب عبر واتساب */}
-                <a
-                  href={`https://wa.me/966574105090?text=${encodeURIComponent(`مرحباً، أريد طلب هذا الجهاز: ${product.name} بسعر ${product.price}`)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-4 block w-full bg-green-600 text-center text-white py-3 rounded-xl font-bold hover:bg-green-700 transition shadow-lg"
-                >
-                  طلب عبر واتساب 📱
-                </a>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => handleStartEdit(item)} className="bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 font-bold px-4 py-2 rounded-xl border border-amber-500/20 text-sm transition">
+                    تعديل ✏️
+                  </button>
+                  <button onClick={() => handleDelete(item.id)} className="bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold px-4 py-2 rounded-xl border border-red-500/20 text-sm transition">
+                    حذف 🗑️
+                  </button>
+                </div>
               </div>
             ))}
           </div>
-        )}
+        </div>
       </div>
-    </main>
-  );
+    </div>
+  )
 }
