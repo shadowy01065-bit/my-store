@@ -28,12 +28,11 @@ export default function AdminPage() {
   const [price, setPrice] = useState('')
   const [battery, setBattery] = useState('')
   const [storage, setStorage] = useState('')
-  const [category, setCategory] = useState('iphone') // القسم الافتراضي
-  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [category, setCategory] = useState('iphone')
+  const [imageBase64, setImageBase64] = useState('')
   const [loading, setLoading] = useState(false)
   const [products, setProducts] = useState<any[]>([])
   const [editingId, setEditingId] = useState<number | null>(null)
-  const [existingImage, setExistingImage] = useState('')
 
   const fetchProducts = async () => {
     const { data } = await supabase.from('products').select('*').order('id', { ascending: false })
@@ -44,6 +43,18 @@ export default function AdminPage() {
     if (isAuthenticated) fetchProducts()
   }, [isAuthenticated])
 
+  // دالة تحويل الصورة المرفوعة من الجهاز إلى Base64
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setImageBase64(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
   const handleStartEdit = (product: any) => {
     setEditingId(product.id)
     setName(product.name || '')
@@ -51,8 +62,7 @@ export default function AdminPage() {
     setBattery(product.battery || '')
     setStorage(product.storage || '')
     setCategory(product.category || 'iphone')
-    setExistingImage(product.image || '')
-    setImageFile(null)
+    setImageBase64(product.image || '')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -63,8 +73,7 @@ export default function AdminPage() {
     setBattery('')
     setStorage('')
     setCategory('iphone')
-    setExistingImage('')
-    setImageFile(null)
+    setImageBase64('')
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -76,35 +85,17 @@ export default function AdminPage() {
 
     setLoading(true)
     try {
-      let imageUrl = existingImage
-
-      if (imageFile) {
-        const fileExt = imageFile.name.split('.').pop()
-        const fileName = `${Date.now()}.${fileExt}`
-        const { error: uploadError } = await supabase.storage
-          .from('images')
-          .upload(fileName, imageFile)
-
-        if (uploadError) throw uploadError
-
-        const { data: publicUrlData } = supabase.storage
-          .from('images')
-          .getPublicUrl(fileName)
-
-        imageUrl = publicUrlData.publicUrl
-      }
-
       if (editingId) {
         const { error: updateError } = await supabase
           .from('products')
-          .update({ name, price, battery, storage, category, image: imageUrl })
+          .update({ name, price, battery, storage, category, image: imageBase64 })
           .eq('id', editingId)
 
         if (updateError) throw updateError
         alert('تم تحديث بيانات الجهاز بنجاح! ✏️')
       } else {
         const { error: insertError } = await supabase.from('products').insert([
-          { name, price, battery, storage, category, image: imageUrl }
+          { name, price, battery, storage, category, image: imageBase64 }
         ])
 
         if (insertError) throw insertError
@@ -226,8 +217,14 @@ export default function AdminPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-slate-300 mb-2">{editingId ? 'تغيير صورة الجهاز (اختياري)' : 'صورة الجهاز'}</label>
-              <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files ? e.target.files[0] : null)} className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-slate-400 file:ml-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-amber-500 file:text-slate-950 hover:file:bg-amber-400 transition cursor-pointer" />
+              <label className="block text-sm font-bold text-slate-300 mb-2">اختر صورة الجهاز من الجهاز</label>
+              <input type="file" accept="image/*" onChange={handleImageChange} className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-slate-300 file:ml-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-amber-500 file:text-slate-955 hover:file:bg-amber-400 cursor-pointer focus:outline-none" />
+              {imageBase64 && (
+                <div className="mt-3 flex items-center gap-3 bg-slate-950 p-3 rounded-2xl border border-slate-800">
+                  <img src={imageBase64} alt="Preview" className="w-12 h-12 object-cover rounded-xl" />
+                  <span className="text-xs text-green-400 font-bold">تم اختيار وفحص الصورة بنجاح ✅</span>
+                </div>
+              )}
             </div>
 
             <button type="submit" disabled={loading} className={`w-full font-black py-4 rounded-2xl shadow-lg transition active:scale-[0.99] disabled:opacity-50 text-base ${editingId ? 'bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-400 text-slate-950' : 'bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950'}`}>
@@ -243,7 +240,7 @@ export default function AdminPage() {
               <div key={item.id} className="flex items-center justify-between bg-slate-950 p-4 rounded-2xl border border-slate-800">
                 <div className="flex items-center gap-4">
                   {item.image ? (
-                    <img src={item.image} alt={item.name} className="w-14 h-14 object-contain bg-slate-900 rounded-xl p-1" />
+                    <img src={item.image} alt={item.name} className="w-14 h-14 object-cover bg-slate-900 rounded-xl" />
                   ) : (
                     <div className="w-14 h-14 bg-slate-900 rounded-xl flex items-center justify-center text-xl">📱</div>
                   )}
