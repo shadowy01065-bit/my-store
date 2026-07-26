@@ -79,7 +79,7 @@ export default function Home() {
                       <img 
                         src={imgSrc} 
                         alt={product.name} 
-                        className="object-cover h-full w-full"
+                        className="object-contain h-full w-full"
                       />
                     </div>
                   )}
