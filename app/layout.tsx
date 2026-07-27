@@ -1,37 +1,6 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-export const metadata: Metadata = {
-  title: "سهيل للاتصالات - أفضل الأجهزة والأصلية",
-  description: "أفضل الأجهزة، الجوالات، والأكسسوارات الأصلية بأفضل الأسعار في متجر سهيل للاتصالات",
+export const metadata = {
+  title: 'Suhail Communications',
   verification: {
-    google: "dXNSo5WOwpCSyA-v28EESOfVNxjNK6KZzWJ8dCGFDRs",
+    google: 'BedPviPTUFe1M4jYhCkVkLoEQmwmf3pPz0O9CtfjnBM',
   },
-};
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  return (
-    <html lang="ar" dir="rtl">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
-      </body>
-    </html>
-  );
 }
