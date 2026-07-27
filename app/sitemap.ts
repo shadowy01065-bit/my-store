@@ -1,12 +1,12 @@
 import { MetadataRoute } from 'next'
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     {
-      url: 'https://suhail-telecom-appp.vercel.app',
+      url: 'https://suhail-telecom-app.vercel.app',
       lastModified: new Date(),
       changeFrequency: 'daily',
-      priority: 1.0,
+      priority: 1,
     },
   ]
 }
